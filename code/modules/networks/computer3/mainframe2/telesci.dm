@@ -129,6 +129,51 @@ proc/is_teleportation_allowed(var/turf/T)
 		onclose(user,"telepad")
 		return
 
+	ui_interact(mob/user, datum/tgui/ui)
+		ui = tgui_process.try_update_ui(user, src, ui)
+		if(!ui)
+			ui = new(user, src, "TelesciPad")
+			ui.open()
+
+	ui_data(mob/user)
+		. = list(
+			"host_id" = src.host_id,
+			"panel_open" = src.panel_open,
+			"allow_scan" = src.allow_scan,
+			"allow_bookmarks" = src.allow_bookmarks,
+			"bookmarks" = src.bookmarks,
+		)
+
+	ui_act(action, list/params, datum/tgui/ui, datum/ui_state/state)
+		. = ..()
+		if (.)
+			return
+		if (!can_act(usr))
+			return
+
+		switch (action) // Leaving as a switch to allow for other events to be added, also maintains pattern
+			if ("reset")
+				return onReset(params)
+			else:
+				return FALSE
+
+	onReset(list/params)
+		if(last_reset && (last_reset + NETWORK_MACHINE_RESET_DELAY >= world.time))
+			return FALSE
+		if(!host_id && !old_host_id)
+			return FALSE
+
+		src.last_reset = world.time
+		var/rem_host = src.host_id ? host_id : old_host_id
+		src.host_id = null
+		//src.old_host_id = null
+		src.post_status(rem_host, "command", "term_disconnect")
+		SPAWN(0.5 SECONDS)
+			src.post_status(rem_host, "command", "term_connect", "device", src.device_tag)
+
+		src.updateUsrDialog()
+		return TRUE
+
 	Topic(href, href_list)
 		if(..())
 			return
@@ -1211,6 +1256,248 @@ proc/is_teleportation_allowed(var/turf/T)
 			usr.Browse(null, "window=t_computer")
 			src.updateUsrDialog()
 			return
+
+
+
+	ui_interact(mob/user, datum/tgui/ui)
+		ui = tgui_process.try_update_ui(user, src, ui)
+		if(!ui)
+			ui = new(user, src, "TelesciConsole")
+			ui.open()
+
+	ui_static_data(mob/user, datum/tgui/ui)
+		. = list(
+			"foo" = "bar"
+		)
+
+	ui_data(mob/user)
+		. = list(
+			"foo" = "bar"
+		)
+
+	ui_act(action, list/params, datum/tgui/ui, datum/ui_state/state)
+		playsound(src.loc, 'sound/machines/keypress.ogg', 50, 1, -15)
+		switch (action)
+			if ("scan")
+				return onScan(params)
+			if ("reconnect")
+				return onReconnect(params)
+			if ("restorebookmark")
+				return onRestoreBookmark(params)
+			if ("deletebookmark")
+				return onDeleteBookmark(params)
+			if ("addbookmark")
+				return onAddBookmark(params)
+			if ("setpad")
+				return onSetPad(params)
+			if ("decreaseX")
+				return onDecreaseX(params)
+			if ("increaseX")
+				return onIncreaseX(params)
+			if ("setX")
+				return onSetX(params)
+			if ("decreaseY")
+				return onDecreaseY(params)
+			if ("increaseY")
+				return onIncreaseY(params)
+			if ("setY")
+				return onSetY(params)
+			if ("decreaseZ")
+				return onDecreaseZ(params)
+			if ("increaseZ")
+				return onIncreaseZ(params)
+			if ("setZ")
+				return onSetZ(params)
+			if ("send")
+				return onSend(params)
+			if ("receive")
+				return onReceive(params)
+			if ("portal")
+				return onPortal(params)
+			else
+				src.updateUsrDialog()
+				return FALSE
+
+	onScan(list/params)
+		if (!host_id)
+			boutput(usr, "<span class='alert'>Error: No host connection!</span>")
+			return
+
+		if (coord_update_flag)
+			coord_update_flag = 0
+			message_host("command=teleman&args=-p [padNum] coords x=[xtarget] y=[ytarget] z=[ztarget]")
+
+		message_host("command=teleman&args=-p [padNum] scan")
+		src.updateUsrDialog(1)
+		return
+
+	onReconnect(list/params)
+		if ((host_id && params["reconnect"] != "2") || !old_host_id || !src.link)
+			return FALSE
+
+		if (params["reconnect"] == "2")
+			host_id = null
+
+		var/old = old_host_id
+		old_host_id = null
+		var/datum/signal/newsignal = get_free_signal()
+		newsignal.source = src
+		newsignal.transmission_method = TRANSMISSION_WIRE
+		newsignal.data["command"] = "term_connect"
+		newsignal.data["device"] = src.device_tag
+
+		newsignal.data_file = user_data.copy_file()
+
+		newsignal.data["address_1"] = old
+		newsignal.data["sender"] = src.net_id
+
+		src.link.post_signal(src, newsignal)
+		SPAWN(1 SECOND)
+			if (!old_host_id)
+				old_host_id = old
+		return TRUE
+
+	onRestorebookmark(list/params)
+		var/datum/teleporter_bookmark/bm = locate(params["restorebookmark"]) in bookmarks
+		if (!bm)
+			return FALSE
+		xtarget = bm.x
+		ytarget = bm.y
+		ztarget = bm.z
+		coord_update_flag = 1
+		src.updateUsrDialog()
+		return TRUE
+
+	onDeletebookmark(list/params)
+		var/datum/teleporter_bookmark/bm = locate(params["deletebookmark"]) in bookmarks
+		if (!bm)
+			return FALSE
+		bookmarks.Remove(bm)
+		src.updateUsrDialog()
+		return TRUE
+
+	onAddbookmark(list/params)
+		if(bookmarks.len >= max_bookmarks)
+			boutput(usr, "<span class='alert'>Maximum number of Bookmarks reached.</span>")
+			return FALSE
+		var/datum/teleporter_bookmark/bm = new
+		var/title = input(usr,"Enter name:","Name","New Bookmark") as text
+		title = copytext(adminscrub(title), 1, 128)
+		if(!length(title)) return
+		bm.name = title
+		bm.x = xtarget
+		bm.y = ytarget
+		bm.z = ztarget
+		bookmarks.Add(bm)
+		src.updateUsrDialog()
+		playsound(src.loc, "keyboard", 50, 1, -15)
+		return TRUE
+
+	onSetpad(list/params)
+		src.padNum = (src.padNum & 3) + 1
+		coord_update_flag = 1
+		src.updateUsrDialog()
+		return TRUE
+
+	onDecreaseX(list/params)
+		var/change = text2num_safe(params["decreaseX"])
+		xtarget = clamp(xtarget-change, 0, 500)
+		coord_update_flag = 1
+		src.updateUsrDialog()
+		return TRUE
+
+	onIncreaseX(list/params)
+		var/change = text2num_safe(params["increaseX"])
+		xtarget = clamp(xtarget+change, 0, 500)
+		coord_update_flag = 1
+		src.updateUsrDialog()
+		return TRUE
+
+	onSetX(list/params)
+		var/change = input(usr,"Target X:","Enter target X coordinate",xtarget) as num
+		if(!isnum_safe(change))
+			return FALSE
+		xtarget = clamp(change, 0, 500)
+		coord_update_flag = 1
+		src.updateUsrDialog()
+		return TRUE
+
+	onDecreaseY(list/params)
+		var/change = text2num_safe(params["decreaseY"])
+		ytarget = clamp(ytarget-change, 0, 500)
+		coord_update_flag = 1
+		src.updateUsrDialog()
+		return TRUE
+
+	onIncreaseY(list/params)
+		var/change = text2num_safe(params["increaseY"])
+		ytarget = clamp(ytarget+change, 0, 500)
+		coord_update_flag = 1
+		src.updateUsrDialog()
+		return TRUE
+
+	onSetY(list/params)
+		var/change = input(usr, "Target Y:", "Enter target Y coordinate", ytarget) as num
+		if(!isnum_safe(change))
+			return FALSE
+		ytarget = clamp(change, 0, 500)
+		coord_update_flag = 1
+		src.updateUsrDialog()
+		return TRUE
+
+	onDecreaseZ(list/params)
+		var/change = text2num_safe(params["decreaseZ"])
+		ztarget = clamp(ztarget-change, 0, 14)
+		coord_update_flag = 1
+		src.updateUsrDialog()
+		return TRUE
+
+	onIncreaseZ(list/params)
+		var/change = text2num_safe(params["increaseZ"])
+		ztarget = clamp(ztarget+change, 0, 14)
+		coord_update_flag = 1
+		src.updateUsrDialog()
+		return TRUE
+
+	onSetZ(list/params)
+		var/change = input(usr, "Target Z:","Enter target Z coordinate",ztarget) as num
+		if(!isnum_safe(change))
+			return FALSE
+		ztarget = clamp(change, 0, 14)
+		coord_update_flag = 1
+		src.updateUsrDialog()
+		return TRUE
+
+	onSend(list/params)
+		if (!host_id)
+			boutput(usr, "<span class='alert'>Error: No host connection!</span>")
+			return FALSE
+
+		if (coord_update_flag)
+			coord_update_flag = 0
+			message_host("command=teleman&args=-p [padNum] coords x=[xtarget] y=[ytarget] z=[ztarget]")
+		message_host("command=teleman&args=-p [padNum] send")
+
+		return TRUE
+
+	onReceive(list/params)
+		if (!host_id)
+			boutput(usr, "<span class='alert'>Error: No host connection!</span>")
+			return FALSE
+
+		if (coord_update_flag)
+			coord_update_flag = 0
+			message_host("command=teleman&args=-p [padNum] coords x=[xtarget] y=[ytarget] z=[ztarget]")
+
+		message_host("command=teleman&args=-p [padNum] receive")
+		return TRUE
+
+	onPortal(list/params)
+		if (coord_update_flag)
+			coord_update_flag = 0
+			message_host("command=teleman&args=-p [padNum] coords x=[xtarget] y=[ytarget] z=[ztarget]")
+		message_host("command=teleman&args=-p [padNum] portal toggle")
+		return TRUE
 
 	process()
 		if(status & (NOPOWER|BROKEN))

@@ -137,11 +137,7 @@ proc/is_teleportation_allowed(var/turf/T)
 
 	ui_data(mob/user)
 		. = list(
-			"host_id" = src.host_id,
-			"panel_open" = src.panel_open,
-			"allow_scan" = src.allow_scan,
-			"allow_bookmarks" = src.allow_bookmarks,
-			"bookmarks" = src.bookmarks,
+			"foo" = "bar"
 		)
 
 	ui_act(action, list/params, datum/tgui/ui, datum/ui_state/state)
@@ -157,7 +153,7 @@ proc/is_teleportation_allowed(var/turf/T)
 			else:
 				return FALSE
 
-	onReset(list/params)
+	proc/onReset(list/params)
 		if(last_reset && (last_reset + NETWORK_MACHINE_RESET_DELAY >= world.time))
 			return FALSE
 		if(!host_id && !old_host_id)
@@ -1257,22 +1253,23 @@ proc/is_teleportation_allowed(var/turf/T)
 			src.updateUsrDialog()
 			return
 
-
-
 	ui_interact(mob/user, datum/tgui/ui)
 		ui = tgui_process.try_update_ui(user, src, ui)
 		if(!ui)
 			ui = new(user, src, "TelesciConsole")
 			ui.open()
 
-	ui_static_data(mob/user, datum/tgui/ui)
-		. = list(
-			"foo" = "bar"
-		)
-
 	ui_data(mob/user)
 		. = list(
-			"foo" = "bar"
+			xtarget,
+			ytarget,
+			ztarget,
+			padNum,
+			host_id,
+			panel_open,
+			allow_scan,
+			allow_bookmarks,
+			bookmarks,
 		)
 
 	ui_act(action, list/params, datum/tgui/ui, datum/ui_state/state)
@@ -1282,14 +1279,16 @@ proc/is_teleportation_allowed(var/turf/T)
 				return onScan(params)
 			if ("reconnect")
 				return onReconnect(params)
-			if ("restorebookmark")
-				return onRestoreBookmark(params)
-			if ("deletebookmark")
-				return onDeleteBookmark(params)
-			if ("addbookmark")
-				return onAddBookmark(params)
+			if ("restoreBookmark")
+				return onRestorebookmark(params)
+			if ("deleteBookmark")
+				return onDeletebookmark(params)
+			if ("addBookmark")
+				return onAddbookmark(params)
+			if ("editBookmark")
+				return onEditbookmark(params)
 			if ("setpad")
-				return onSetPad(params)
+				return onSetpad(params)
 			if ("decreaseX")
 				return onDecreaseX(params)
 			if ("increaseX")
@@ -1314,24 +1313,24 @@ proc/is_teleportation_allowed(var/turf/T)
 				return onReceive(params)
 			if ("portal")
 				return onPortal(params)
+			if ("configSwitch")
+				return onConfigSwitch(params)
 			else
 				src.updateUsrDialog()
 				return FALSE
 
-	onScan(list/params)
+	proc/onScan(list/params)
 		if (!host_id)
 			boutput(usr, "<span class='alert'>Error: No host connection!</span>")
-			return
-
+			return FALSE
 		if (coord_update_flag)
 			coord_update_flag = 0
 			message_host("command=teleman&args=-p [padNum] coords x=[xtarget] y=[ytarget] z=[ztarget]")
-
 		message_host("command=teleman&args=-p [padNum] scan")
 		src.updateUsrDialog(1)
-		return
+		return TRUE
 
-	onReconnect(list/params)
+	proc/onReconnect(list/params)
 		if ((host_id && params["reconnect"] != "2") || !old_host_id || !src.link)
 			return FALSE
 
@@ -1357,7 +1356,7 @@ proc/is_teleportation_allowed(var/turf/T)
 				old_host_id = old
 		return TRUE
 
-	onRestorebookmark(list/params)
+	proc/onRestoreBookmark(list/params)
 		var/datum/teleporter_bookmark/bm = locate(params["restorebookmark"]) in bookmarks
 		if (!bm)
 			return FALSE
@@ -1368,7 +1367,7 @@ proc/is_teleportation_allowed(var/turf/T)
 		src.updateUsrDialog()
 		return TRUE
 
-	onDeletebookmark(list/params)
+	proc/onDeleteBookmark(list/params)
 		var/datum/teleporter_bookmark/bm = locate(params["deletebookmark"]) in bookmarks
 		if (!bm)
 			return FALSE
@@ -1376,7 +1375,7 @@ proc/is_teleportation_allowed(var/turf/T)
 		src.updateUsrDialog()
 		return TRUE
 
-	onAddbookmark(list/params)
+	proc/onAddBookmark(list/params)
 		if(bookmarks.len >= max_bookmarks)
 			boutput(usr, "<span class='alert'>Maximum number of Bookmarks reached.</span>")
 			return FALSE
@@ -1393,82 +1392,78 @@ proc/is_teleportation_allowed(var/turf/T)
 		playsound(src.loc, "keyboard", 50, 1, -15)
 		return TRUE
 
-	onSetpad(list/params)
+	proc/onEditBookmark
+
+	proc/onSetpad(list/params)
 		src.padNum = (src.padNum & 3) + 1
 		coord_update_flag = 1
 		src.updateUsrDialog()
 		return TRUE
 
-	onDecreaseX(list/params)
+	proc/onDecreaseX(list/params)
 		var/change = text2num_safe(params["decreaseX"])
 		xtarget = clamp(xtarget-change, 0, 500)
 		coord_update_flag = 1
 		src.updateUsrDialog()
 		return TRUE
 
-	onIncreaseX(list/params)
+	proc/onIncreaseX(list/params)
 		var/change = text2num_safe(params["increaseX"])
 		xtarget = clamp(xtarget+change, 0, 500)
 		coord_update_flag = 1
 		src.updateUsrDialog()
 		return TRUE
 
-	onSetX(list/params)
-		var/change = input(usr,"Target X:","Enter target X coordinate",xtarget) as num
-		if(!isnum_safe(change))
-			return FALSE
+	proc/onSetX(list/params)
+		var/change = text2num_safe(params["setX"])
 		xtarget = clamp(change, 0, 500)
 		coord_update_flag = 1
 		src.updateUsrDialog()
 		return TRUE
 
-	onDecreaseY(list/params)
+	proc/onDecreaseY(list/params)
 		var/change = text2num_safe(params["decreaseY"])
 		ytarget = clamp(ytarget-change, 0, 500)
 		coord_update_flag = 1
 		src.updateUsrDialog()
 		return TRUE
 
-	onIncreaseY(list/params)
+	proc/onIncreaseY(list/params)
 		var/change = text2num_safe(params["increaseY"])
 		ytarget = clamp(ytarget+change, 0, 500)
 		coord_update_flag = 1
 		src.updateUsrDialog()
 		return TRUE
 
-	onSetY(list/params)
-		var/change = input(usr, "Target Y:", "Enter target Y coordinate", ytarget) as num
-		if(!isnum_safe(change))
-			return FALSE
+	proc/onSetY(list/params)
+		var/change = text2num_safe(params["setY"])
 		ytarget = clamp(change, 0, 500)
 		coord_update_flag = 1
 		src.updateUsrDialog()
 		return TRUE
 
-	onDecreaseZ(list/params)
+	proc/onDecreaseZ(list/params)
 		var/change = text2num_safe(params["decreaseZ"])
 		ztarget = clamp(ztarget-change, 0, 14)
 		coord_update_flag = 1
 		src.updateUsrDialog()
 		return TRUE
 
-	onIncreaseZ(list/params)
+	proc/onIncreaseZ(list/params)
 		var/change = text2num_safe(params["increaseZ"])
 		ztarget = clamp(ztarget+change, 0, 14)
 		coord_update_flag = 1
 		src.updateUsrDialog()
 		return TRUE
 
-	onSetZ(list/params)
-		var/change = input(usr, "Target Z:","Enter target Z coordinate",ztarget) as num
-		if(!isnum_safe(change))
-			return FALSE
+	proc/onSetZ(list/params)
+		var/change = text2num_safe(params["setZ"])
 		ztarget = clamp(change, 0, 14)
 		coord_update_flag = 1
 		src.updateUsrDialog()
 		return TRUE
 
-	onSend(list/params)
+	proc/onSend(list/params)
 		if (!host_id)
 			boutput(usr, "<span class='alert'>Error: No host connection!</span>")
 			return FALSE
@@ -1480,7 +1475,7 @@ proc/is_teleportation_allowed(var/turf/T)
 
 		return TRUE
 
-	onReceive(list/params)
+	proc/onReceive(list/params)
 		if (!host_id)
 			boutput(usr, "<span class='alert'>Error: No host connection!</span>")
 			return FALSE
@@ -1492,12 +1487,15 @@ proc/is_teleportation_allowed(var/turf/T)
 		message_host("command=teleman&args=-p [padNum] receive")
 		return TRUE
 
-	onPortal(list/params)
+	proc/onPortal(list/params)
 		if (coord_update_flag)
 			coord_update_flag = 0
 			message_host("command=teleman&args=-p [padNum] coords x=[xtarget] y=[ytarget] z=[ztarget]")
 		message_host("command=teleman&args=-p [padNum] portal toggle")
 		return TRUE
+
+	proc/onConfigSwitch(list/params)
+		return ..()
 
 	process()
 		if(status & (NOPOWER|BROKEN))

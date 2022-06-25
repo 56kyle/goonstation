@@ -73,6 +73,24 @@
 
 		. += "</tr></table>"
 
+	proc/onConfigSwitch(list/params)
+		. = ..()
+		if (.)
+			return
+
+		if (params["dipsw"] && src.panel_open && get_dist(usr, src) < 2)
+			var/switchNum = text2num_safe(params["dipsw"])
+			if (switchNum < 1 || switchNum > 8)
+				return TRUE
+
+			switchNum = round(switchNum)
+			if (net_number & switchNum)
+				net_number &= ~switchNum
+			else
+				net_number |= switchNum
+			return TRUE
+		return FALSE
+
 	Topic(href, href_list)
 		if (..())
 			return 1

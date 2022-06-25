@@ -16,6 +16,19 @@ export const TelesciConsole = (props, context) => {
     bookmarks,
   } = data;
 
+
+  const decreaseX = (dx: number) => act('decreaseX', { dx });
+  const decreaseY = (dy: number) => act('decreaseY', { dy });
+  const decreaseZ = (dz: number) => act('decreaseZ', { dz });
+
+  const increaseX = (dx: number) => act('increaseX', { dx });
+  const increaseY = (dy: number) => act('increaseY', { dy });
+  const increaseZ = (dz: number) => act('increaseZ', { dz });
+
+  const setX = (x: number) => act('setX', { x });
+  const setY = (y: number) => act('setY', { y });
+  const setZ = (z: number) => act('setZ', { z });
+
   return (
     <Window title="Teleport Console"
       width={700}

@@ -74,10 +74,6 @@
 		. += "</tr></table>"
 
 	proc/onConfigSwitch(list/params)
-		. = ..()
-		if (.)
-			return
-
 		if (params["dipsw"] && src.panel_open && get_dist(usr, src) < 2)
 			var/switchNum = text2num_safe(params["dipsw"])
 			if (switchNum < 1 || switchNum > 8)

@@ -1,6 +1,6 @@
 
 import { useBackend, useSharedState } from '../../backend';
-import { Box, Button, Flex, Input, Knob, LabeledList, NumberInput, TextArea, Section, Slider, Stack, Table } from '../../components';
+import { Box, Button, Divider, Flex, Input, Knob, LabeledList, NumberInput, TextArea, Section, Slider, Stack, Table } from '../../components';
 import { Window } from '../../layouts';
 
 import { Bookmark } from './Bookmark';
@@ -40,9 +40,9 @@ export const TelesciConsole = (props, context) => {
   const incY = (amount: number) => <Button content="+" onClick={() => act("increaseY", { y: amount })} compact />;
   const incZ = (amount: number) => <Button content="+" onClick={() => act("increaseZ", { z: amount })} compact />;
 
-  const sendButton = () => <Button title="Send" content="Send" icon="arrow-right" onClick={() => act('send')} />;
-  const recieveButton = () => <Button title="Recieve" content="Recieve" icon="arrow-left" onClick={() => act('recieve')} />;
-  const toggleButton = () => <Button title="Toggle Portal" content="Toggle Portal" icon="fa-power-off" onClick={() => act('toggle_portal')} />;
+  const sendButton = () => <Button content="Send" icon="arrow-right" onClick={() => act('send')} />;
+  const recieveButton = () => <Button content="Recieve" icon="arrow-left" onClick={() => act('recieve')} />;
+  const toggleButton = () => <Button content="Toggle Portal" icon="fa-power-off" onClick={() => act('toggle_portal')} />;
 
 
   return (
@@ -50,68 +50,54 @@ export const TelesciConsole = (props, context) => {
       width={400}>
       <Window.Content>
         <Section title="Controls">
-          <Table>
-            <Table.Row>
-              <Table.Cell>
-                <Flex>
-                  <Flex.Item textAlign="center" grow={1}>
-                    <Box verticalAlign="middle" inline>X</Box>
-                  </Flex.Item>
-                  <Flex.Item grow={5}>
-                    <NumberInput title="X"
-                      value={xtarget}
-                      minValue={xMin}
-                      maxValue={xMax}
-                      onChange={(e, value) => act("setX", { "x": value })}
-                    />
-                  </Flex.Item>
-                </Flex>
-              </Table.Cell>
-              <Table.Cell>
-                {sendButton()}
-              </Table.Cell>
-            </Table.Row>
-            <Table.Row title="Y">
-              <Table.Cell>
-                <Flex>
-                  <Flex.Item textAlign="center" grow={1}>
-                    <Box verticalAlign="middle" inline>Y</Box>
-                  </Flex.Item>
-                  <Flex.Item grow={5}>
-                    <NumberInput title="Y"
-                      value={ytarget}
-                      minValue={yMin}
-                      maxValue={yMax}
-                      onChange={(e, value: number) => act("setY", { "y": value })}
-                    />
-                  </Flex.Item>
-                </Flex>
-              </Table.Cell>
-              <Table.Cell>
-                {recieveButton()}
-              </Table.Cell>
-            </Table.Row>
-            <Table.Row>
-              <Table.Cell>
-                <Flex>
-                  <Flex.Item textAlign="center" grow={1}>
-                    <Box verticalAlign="middle" inline>Z</Box>
-                  </Flex.Item>
-                  <Flex.Item grow={5}>
-                    <NumberInput title="Z"
-                      value={ztarget}
-                      minValue={zMin}
-                      maxValue={zMax}
-                      onChange={(e, value: number) => act("setZ", { "z": value })}
-                    />
-                  </Flex.Item>
-                </Flex>
-              </Table.Cell>
-              <Table.Cell>
-                {toggleButton()}
-              </Table.Cell>
-            </Table.Row>
-          </Table>
+          <Flex>
+            <Flex.Item basis={1} textAlign="center" grow={1}>
+              <Box verticalAlign="middle">X:</Box>
+            </Flex.Item>
+            <Flex.Item basis={1} grow={1}>
+              <NumberInput title="X"
+                value={xtarget}
+                minValue={xMin}
+                maxValue={xMax}
+                onChange={(e, value) => act("setX", { "x": value })}
+              />
+            </Flex.Item>
+            <Flex.Item basis={1} grow={10}>
+              {sendButton()}
+            </Flex.Item>
+          </Flex>
+          <Flex>
+            <Flex.Item basis={1} textAlign="center" grow={1}>
+              <Box verticalAlign="middle">Y:</Box>
+            </Flex.Item>
+            <Flex.Item basis={1} grow={1}>
+              <NumberInput title="Y"
+                value={ytarget}
+                minValue={yMin}
+                maxValue={yMax}
+                onChange={(e, value: number) => act("setY", { "y": value })}
+              />
+            </Flex.Item>
+            <Flex.Item basis={1} grow={10}>
+              {recieveButton()}
+            </Flex.Item>
+          </Flex>
+          <Flex>
+            <Flex.Item basis={1} textAlign="center" grow={1}>
+              <Box verticalAlign="middle">Z:</Box>
+            </Flex.Item>
+            <Flex.Item basis={1} grow={1}>
+              <NumberInput title="Z"
+                value={ztarget}
+                minValue={zMin}
+                maxValue={zMax}
+                onChange={(e, value: number) => act("setZ", { "z": value })}
+              />
+            </Flex.Item>
+            <Flex.Item basis={1} grow={10}>
+              {toggleButton()}
+            </Flex.Item>
+          </Flex>
         </Section>
         <Section title="Bookmarks">
           {allow_bookmarks ? bookmarks.map((bookmark, index) => (
